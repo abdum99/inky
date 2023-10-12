@@ -22,6 +22,10 @@ extern UBYTE *Panel_Area_Frame_Buf;
 
 extern bool Four_Byte_Align;
 
-UBYTE eInk_BMP(UWORD Panel_Width, UWORD Panel_Height, UDOUBLE Init_Target_Memory_Addr, UBYTE BitsPerPixel, int epd_mode);
+bool eInk_Init(IT8951_Dev_Info *Dev_Info);
+
+UBYTE eInk_BMP(IT8951_Dev_Info *Dev_Info, UBYTE BitsPerPixel);
+
+void eInk_Shutdown();
 
 #endif
