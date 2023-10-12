@@ -63,7 +63,7 @@
 *
 ******************************************************************************/
 #include "GUI_Paint.h"
-#include "../Config/Debug.h"
+#include "../Utils/Debug.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h> //memset()

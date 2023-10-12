@@ -12,8 +12,10 @@
 #include "./EPD_IT8951.h"
 #include "../GUI/GUI_Paint.h"
 #include "../GUI/GUI_BMPfile.h"
-#include "../Config/Debug.h"
+#include "../Utils/Debug.h"
 #include "../Config/DEV_Config.h"
+
+#define IMG_FILE "./pic/img.bmp"
 
 UBYTE *Refresh_Frame_Buf = NULL;
 
@@ -24,7 +26,7 @@ bool Four_Byte_Align = false;
 
 UWORD VCOM = 2510;
 
-IT8951_Dev_Info Dev_Info = {0, 0};
+extern IT8951_Dev_Info Dev_Info;
 UWORD Panel_Width;
 UWORD Panel_Height;
 int epd_mode = 0;	//0: no rotate, no mirror
@@ -146,9 +148,7 @@ UBYTE eInk_BMP(IT8951_Dev_Info *Dev_Info, UBYTE BitsPerPixel){
     Paint_SetBitsPerPixel(BitsPerPixel);
     Paint_Clear(WHITE);
 
-    char Path[128] = "./pic/img001.bmp";
-
-    GUI_ReadBmp(Path, 0, 0);
+    GUI_ReadBmp(IMG_FILE, 0, 0);
     EPD_IT8951_4bp_Refresh(Refresh_Frame_Buf, 0, 0, WIDTH,  HEIGHT, false, Init_Target_Memory_Addr,false);
 
     if(Refresh_Frame_Buf != NULL){

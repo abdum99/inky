@@ -55,7 +55,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
-#include "Debug.h"
+#include "../Utils/Debug.h"
 
 #include <bcm2835.h>
 
