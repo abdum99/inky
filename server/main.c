@@ -15,6 +15,8 @@
 #define INKY_TOPIC "/inky/bmp"
 #define INKY_QOS 2 // QOS 2: delivered exactly once
 
+#define IMG_FILE "./pic/img.bmp"
+
 #define ONE_MINUTE (60 * 1000)
 
 IT8951_Dev_Info Dev_Info;
@@ -25,12 +27,20 @@ void on_message(struct mosquitto *mqtt, void *obj, const struct mosquitto_messag
     Debug("WOOOAH GOT A MESSAGE. HOLY SHIT\n");
     Debug("LO\n");
     Debug("Topic: %s\n", message->topic);
+    Debug("Here");
     fflush(stdout);
+    Debug("THere");
 
-    FILE *fptr;
-    fptr = fopen("../pic/img.bmp", "wb+");
+    Debug("payloadlen: %u\n", message->payloadlen);
+
+    FILE *fptr = fopen(IMG_FILE, "wb+");
+    if (!fptr) {
+        Debug("Unable to open file!\n");
+        return;
+    }
     fwrite(message->payload, message->payloadlen, sizeof(uint8_t), fptr);
     fclose(fptr);
+    Debug("Received image in %s\n", IMG_FILE);
 
     //Show a bmp file
     //1bp use A2 mode by default, before used it, refresh the screen with WHITE
@@ -38,12 +48,12 @@ void on_message(struct mosquitto *mqtt, void *obj, const struct mosquitto_messag
 }
 
 void on_connect(struct mosquitto *mosq, void *obj, int rc) {
-	printf("ID: %d\n", * (int *) obj);
+    Debug("Connected to Osiris MQTT Broker\n");
+	Debug("ID: %d\n", * (int *) obj);
 	if(rc) {
-		printf("Error with result code: %d\n", rc);
+		Debug("Error with result code: %d\n", rc);
 		exit(-1);
 	}
-	mosquitto_subscribe(mosq, NULL, "test/t1", 0);
 }
 
 // NEED TO FREE MQTT !!!
@@ -57,15 +67,12 @@ static int init_mqtt() {
 
 static int connect_mqtt() {
     mosquitto_message_callback_set(mqtt, on_message);
-    // mosquitto_connect_callback_set(mqtt, on_connect);
+    mosquitto_connect_callback_set(mqtt, on_connect);
     int status = mosquitto_connect(mqtt, OSIRIS_HOST, OSIRIS_MQTT_PORT, KEEP_ALIVE);
     if (status != MOSQ_ERR_SUCCESS) {
         Debug("COULD NOT CONNECT\n");
         Debug("STATUS: %s\n", mosquitto_strerror(status));
     }
-    Debug("Connected to Osiris MQTT Broker\n");
-
-    sleep(5);
 
     status = mosquitto_subscribe(mqtt, &RECV_COUNT, INKY_TOPIC, 2);
     if (status != MOSQ_ERR_SUCCESS) {
@@ -73,11 +80,16 @@ static int connect_mqtt() {
         Debug("STATUS: %s\n", mosquitto_strerror(status));
     }
     Debug("Subscribed to %s\n", INKY_TOPIC);
+
     return 0;
 }
 
 int main(int argc, char *argv[])
 {
+    if (getuid() != 0) {
+        Debug("Program must be run as root for now :(\n");
+        return -1;
+    }
     if (!eInk_Init(&Dev_Info)) {
         return -1;
     };

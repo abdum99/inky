@@ -1,2 +1,5 @@
 bin
 bcm2835-*
+
+# target binary
+inky
