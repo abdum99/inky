@@ -3,12 +3,15 @@
 
 #include <math.h>
 
-#include <stdlib.h>     //exit()
+#include <stdlib.h>  // exit()
+#include <string.h>
+#include <errno.h>
+#include <unistd.h>  // sleep()
 
 #include <mosquitto.h>
 #include <mqtt_protocol.h>
 
-#define OSIRIS_HOST "osiris.local"
+#define OSIRIS_HOST "10.0.0.14"
 #define OSIRIS_MQTT_PORT 1883
 #define KEEP_ALIVE 60
 
@@ -25,12 +28,7 @@ static int RECV_COUNT = 0;
 
 void on_message(struct mosquitto *mqtt, void *obj, const struct mosquitto_message *message) {
     Debug("WOOOAH GOT A MESSAGE. HOLY SHIT\n");
-    Debug("LO\n");
     Debug("Topic: %s\n", message->topic);
-    Debug("Here");
-    fflush(stdout);
-    Debug("THere");
-
     Debug("payloadlen: %u\n", message->payloadlen);
 
     FILE *fptr = fopen(IMG_FILE, "wb+");
@@ -68,13 +66,21 @@ static int init_mqtt() {
 static int connect_mqtt() {
     mosquitto_message_callback_set(mqtt, on_message);
     mosquitto_connect_callback_set(mqtt, on_connect);
-    int status = mosquitto_connect(mqtt, OSIRIS_HOST, OSIRIS_MQTT_PORT, KEEP_ALIVE);
-    if (status != MOSQ_ERR_SUCCESS) {
+    while (true) {
+        int status = mosquitto_connect(mqtt, OSIRIS_HOST, OSIRIS_MQTT_PORT, KEEP_ALIVE);
+        if (status == MOSQ_ERR_SUCCESS) {
+            break;
+        }
         Debug("COULD NOT CONNECT\n");
         Debug("STATUS: %s\n", mosquitto_strerror(status));
+        if (status == MOSQ_ERR_ERRNO) {
+            Debug("%s\n", strerror(errno));
+        }
+        sleep(5);
+        Debug("Reconnecting...");
     }
 
-    status = mosquitto_subscribe(mqtt, &RECV_COUNT, INKY_TOPIC, 2);
+    int status = mosquitto_subscribe(mqtt, &RECV_COUNT, INKY_TOPIC, 2);
     if (status != MOSQ_ERR_SUCCESS) {
         Debug("COULD NOT SUBSRIBE!\n");
         Debug("STATUS: %s\n", mosquitto_strerror(status));
