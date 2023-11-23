@@ -27,7 +27,6 @@ struct mosquitto *mqtt = NULL; // mosquitto client
 static int RECV_COUNT = 0;
 
 void on_message(struct mosquitto *mqtt, void *obj, const struct mosquitto_message *message) {
-    Debug("WOOOAH GOT A MESSAGE. HOLY SHIT\n");
     Debug("Topic: %s\n", message->topic);
     Debug("payloadlen: %u\n", message->payloadlen);
 

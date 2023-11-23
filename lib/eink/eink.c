@@ -143,7 +143,6 @@ UBYTE eInk_BMP(IT8951_Dev_Info *Dev_Info, UBYTE BitsPerPixel){
 
     Paint_NewImage(Refresh_Frame_Buf, WIDTH, HEIGHT, 0, BLACK);
     Paint_SelectImage(Refresh_Frame_Buf);
-    DEV_Delay_ms(2000);
 	Epd_Mode(epd_mode);
     Paint_SetBitsPerPixel(BitsPerPixel);
     Paint_Clear(WHITE);
