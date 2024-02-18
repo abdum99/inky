@@ -1,0 +1,13 @@
+[Unit]
+Description=Inky Program
+After=multi-user.target
+
+[Service]
+Type=forking
+WorkingDirectory=/home/pi/inky
+User=pi
+ExecStart=/home/pi/inky/run_inky.sh
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
