@@ -35,6 +35,8 @@
 #
 ******************************************************************************/
 
+#include <sys/time.h>
+
 #include "GUI_BMPfile.h"
 #include "GUI_Paint.h"
 #include "../Utils/Debug.h"
@@ -412,7 +414,19 @@ UBYTE GUI_ReadBmp(const char *path, UWORD x, UWORD y)
 	}
 
 	Bitmap_format_Matrix(bmp_dst_buf,bmp_src_buf);
+
+    // timing
+    struct timeval stop, start;
+	unsigned long t_drawmatrix;
+    // ============ START TIMING =============
+    gettimeofday(&start, NULL);
+    // ***************************************
 	DrawMatrix(x, y,InfoHead.biWidth, InfoHead.biHeight, bmp_dst_buf);
+    // ***************************************
+    gettimeofday(&stop, NULL);
+    t_drawmatrix = (stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec;
+    // ============ STOP TIMING =============
+	Debug("TIME::DrawMatrix: %lu ms\n\n", t_drawmatrix / 1000);
 
     free(bmp_src_buf);
     free(bmp_dst_buf);
