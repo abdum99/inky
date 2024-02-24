@@ -3,8 +3,11 @@
 
 #include <math.h>
 
+#include <signal.h>
+
 #include <stdlib.h>  // exit()
 #include <string.h>
+#include <stdio.h>
 #include <errno.h>
 #include <unistd.h>  // sleep()
 
@@ -16,6 +19,7 @@
 #define KEEP_ALIVE 60
 
 #define INKY_TOPIC "/inky/bmp"
+#define RESPONSE_CHANNEL "/inky/bmp/response"
 #define INKY_QOS 2 // QOS 2: delivered exactly once
 
 #define IMG_FILE "./pic/img.bmp"
@@ -23,10 +27,61 @@
 #define ONE_MINUTE (60 * 1000)
 
 IT8951_Dev_Info Dev_Info;
-struct mosquitto *mqtt = NULL; // mosquitto client
+struct mosquitto *mosq = NULL; // mosquitto client
 static int RECV_COUNT = 0;
 
-void on_message(struct mosquitto *mqtt, void *obj, const struct mosquitto_message *message) {
+void on_message_v5(
+    struct mosquitto *mosq,
+    void *obj,
+    const struct mosquitto_message *message,
+    const mosquitto_property *proplist
+) {
+    Debug("Topic: %s\n", message->topic);
+    Debug("payloadlen: %u\n", message->payloadlen);
+
+    char *response_topic;
+    uint8_t *correlation_data;
+    uint16_t correlation_data_len;
+    // read v5 properties to get next property
+    const mosquitto_property *prop;
+    for(prop = proplist; prop != NULL; prop = mosquitto_property_next(prop)) {
+        const mosquitto_property *res;
+        if(mosquitto_property_identifier(prop) == MQTT_PROP_RESPONSE_TOPIC) {
+            res = mosquitto_property_read_string(
+                prop,
+                MQTT_PROP_RESPONSE_TOPIC,
+                &response_topic,
+                false
+            );
+            if (res == NULL) {
+                Debug("response topic could not be read. returning");
+                return;
+            }
+        } else if (mosquitto_property_identifier(prop) == MQTT_PROP_CORRELATION_DATA) {
+            res = mosquitto_property_read_binary(
+                prop,
+                MQTT_PROP_CORRELATION_DATA,
+                (void **)&correlation_data,
+                &correlation_data_len,
+                false
+            );
+        }
+    }
+
+    FILE *fptr = fopen(IMG_FILE, "wb+");
+    if (!fptr) {
+        Debug("Unable to open file!\n");
+        return;
+    }
+    fwrite(message->payload, message->payloadlen, sizeof(uint8_t), fptr);
+    fclose(fptr);
+    Debug("Received image in %s\n", IMG_FILE);
+
+    //Show a bmp file
+    eInk_BMP(&Dev_Info, BitsPerPixel_4);
+}
+
+void on_message(struct mosquitto *mosq, void *obj, const struct mosquitto_message *message) {
     Debug("Topic: %s\n", message->topic);
     Debug("payloadlen: %u\n", message->payloadlen);
 
@@ -40,7 +95,6 @@ void on_message(struct mosquitto *mqtt, void *obj, const struct mosquitto_messag
     Debug("Received image in %s\n", IMG_FILE);
 
     //Show a bmp file
-    //1bp use A2 mode by default, before used it, refresh the screen with WHITE
     eInk_BMP(&Dev_Info, BitsPerPixel_4);
 }
 
@@ -57,16 +111,17 @@ void on_connect(struct mosquitto *mosq, void *obj, int rc) {
 static int init_mqtt() {
     Debug("Initting MQTT\n");
     mosquitto_lib_init();
-    mqtt = mosquitto_new(NULL, true, NULL);
+    mosq = mosquitto_new(NULL, true, NULL);
+    mosquitto_int_option(mosq, MOSQ_OPT_PROTOCOL_VERSION, MQTT_PROTOCOL_V5);
 
     return 0;
 }
 
 static int connect_mqtt() {
-    mosquitto_message_callback_set(mqtt, on_message);
-    mosquitto_connect_callback_set(mqtt, on_connect);
+    mosquitto_message_v5_callback_set(mosq, on_message_v5);
+    mosquitto_connect_callback_set(mosq, on_connect);
     while (true) {
-        int status = mosquitto_connect(mqtt, OSIRIS_HOST, OSIRIS_MQTT_PORT, KEEP_ALIVE);
+        int status = mosquitto_connect(mosq, OSIRIS_HOST, OSIRIS_MQTT_PORT, KEEP_ALIVE);
         if (status == MOSQ_ERR_SUCCESS) {
             break;
         }
@@ -79,7 +134,7 @@ static int connect_mqtt() {
         Debug("Reconnecting...");
     }
 
-    int status = mosquitto_subscribe(mqtt, &RECV_COUNT, INKY_TOPIC, 2);
+    int status = mosquitto_subscribe(mosq, &RECV_COUNT, INKY_TOPIC, 2);
     if (status != MOSQ_ERR_SUCCESS) {
         Debug("COULD NOT SUBSRIBE!\n");
         Debug("STATUS: %s\n", mosquitto_strerror(status));
@@ -102,12 +157,20 @@ int main(int argc, char *argv[])
     init_mqtt();
     connect_mqtt();
 
-	mosquitto_loop_start(mqtt);
-	printf("Press Enter to quit...\n");
-	getchar();
-	mosquitto_loop_stop(mqtt, true);
+	mosquitto_loop_start(mosq);
 
-    eInk_Shutdown();
+    while (1) {
+        printf("Type \"quit\" to quit...\n");
+
+        char input[32];
+        fgets(input, sizeof input, stdin);
+        if (strncmp(input, "quit\n", sizeof input) == 0) {
+            printf("Exiting...");
+            mosquitto_loop_stop(mosq, true);
+            eInk_Shutdown();
+            return 0;
+        }
+    }
     
     return 0;
 }
