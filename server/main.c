@@ -138,32 +138,12 @@ void on_message_v5(
     Debug("Topic: %s\n", message->topic);
     Debug("payloadlen: %u\n", message->payloadlen);
 
-    // timing
-    struct timeval stop, start;
-
-    // ============ START TIMING =============
-    gettimeofday(&start, NULL);
-    // ***************************************
     int res = extract_mqtt_properties(proplist);
     if (res != 0) {
         Debug("returning...\n");
         pthread_mutex_unlock(&device_lock);
         return;
     }
-    // ***************************************
-    gettimeofday(&stop, NULL);
-    printf(
-        "TIME::extracting mqtt props: %lu ms\n",
-        ((stop.tv_sec - start.tv_sec) * 1000000 +
-        (stop.tv_usec - start.tv_usec))
-        / 1000
-    ); 
-    // ============ STOP TIMING =============
-
-
-    // ============ START TIMING =============
-    gettimeofday(&start, NULL);
-    // ***************************************
     FILE *fptr = fopen(IMG_FILE, "wb+");
     if (!fptr) {
         Debug("Unable to open file!\n");
@@ -172,32 +152,12 @@ void on_message_v5(
     }
     fwrite(message->payload, message->payloadlen, sizeof(uint8_t), fptr);
     fclose(fptr);
-    // ***************************************
-    gettimeofday(&stop, NULL);
-    printf(
-        "TIME::writing file: %lu ms\n",
-        ((stop.tv_sec - start.tv_sec) * 1000000 +
-        (stop.tv_usec - start.tv_usec))
-        / 1000
-    ); 
-    // ============ STOP TIMING =============
 
     Debug("Received image in %s\n", IMG_FILE);
 
-    // ============ START TIMING =============
-    gettimeofday(&start, NULL);
-    // ***************************************
     //Show a bmp file
     eInk_BMP(&Dev_Info, BitsPerPixel_4);
-    // ***************************************
-    gettimeofday(&stop, NULL);
-    printf(
-        "TIME::drawing BMP: %lu ms\n",
-        ((stop.tv_sec - start.tv_sec) * 1000000 +
-        (stop.tv_usec - start.tv_usec))
-        / 1000
-    ); 
-    // ============ STOP TIMING =============
+
     pthread_mutex_unlock(&device_lock);
     res = mosquitto_publish(
         mosq,

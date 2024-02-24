@@ -109,13 +109,14 @@ bool eInk_Init(IT8951_Dev_Info *Dev_Info) {
     *Dev_Info = EPD_IT8951_Init(VCOM);
 
     char* LUT_Version = (char*)Dev_Info->LUT_Version;
-    if( strcmp(LUT_Version, "M841_TFA2812A2") != 0 ){
-        Debug("Wrong LUT Version");
+    if( strcmp(LUT_Version, "M841_TFA2812") != 0 ){
+        Debug("Wrong LUT Version\n");
     }
     Debug("LUT: %s", LUT_Version);
     //10.3inch e-Paper HAT(1872,1404)
     A2_Mode = 6;
-    Debug("A2 Mode:%d\r\n", A2_Mode);
+    GC16_Mode = 2
+    Debug("GC16 Mode: %d\tA2 Mode:%d\r\n", GC16_Mode, A2_Mode);
 
     UDOUBLE Init_Target_Memory_Addr = Dev_Info->Memory_Addr_L | (Dev_Info->Memory_Addr_H << 16);
 	EPD_IT8951_Clear_Refresh(*Dev_Info, Init_Target_Memory_Addr, INIT_Mode);
@@ -142,84 +143,13 @@ UBYTE eInk_BMP(IT8951_Dev_Info *Dev_Info, UBYTE BitsPerPixel){
         return -1;
     }
 
-    // timing
-    struct timeval stop, start;
-    
-    unsigned long t_newimage, t_selectimage, t_epdmode, t_setbitsperpixel, t_clear, t_readbmp, t_refresh;
-
-    // ============ START TIMING =============
-    gettimeofday(&start, NULL);
-    // ***************************************
     Paint_NewImage(Refresh_Frame_Buf, WIDTH, HEIGHT, 0, BLACK);
-    // ***************************************
-    gettimeofday(&stop, NULL);
-    t_newimage = (stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec;
-    // ============ STOP TIMING =============
-
-    // ============ START TIMING =============
-    gettimeofday(&start, NULL);
-    // ***************************************
     Paint_SelectImage(Refresh_Frame_Buf);
-    // ***************************************
-    gettimeofday(&stop, NULL);
-    t_selectimage = (stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec;
-    // ============ STOP TIMING =============
-
-    // ============ START TIMING =============
-    gettimeofday(&start, NULL);
-    // ***************************************
 	Epd_Mode(epd_mode);
-    // ***************************************
-    gettimeofday(&stop, NULL);
-    t_epdmode = (stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec;
-    // ============ STOP TIMING =============
-
-    // ============ START TIMING =============
-    gettimeofday(&start, NULL);
-    // ***************************************
     Paint_SetBitsPerPixel(BitsPerPixel);
-    // ***************************************
-    gettimeofday(&stop, NULL);
-    t_setbitsperpixel = (stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec;
-    // ============ STOP TIMING =============
-    
-    // ============ START TIMING =============
-    gettimeofday(&start, NULL);
-    // ***************************************
     Paint_Clear(WHITE);
-    // ***************************************
-    gettimeofday(&stop, NULL);
-    t_clear = (stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec;
-    // ============ STOP TIMING =============
-
-    // ============ START TIMING =============
-    gettimeofday(&start, NULL);
-    // ***************************************
     GUI_ReadBmp(IMG_FILE, 0, 0);
-    // ***************************************
-    gettimeofday(&stop, NULL);
-    t_readbmp = (stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec;
-    // ============ STOP TIMING =============
-
-    // ============ START TIMING =============
-    gettimeofday(&start, NULL);
-    // ***************************************
     EPD_IT8951_4bp_Refresh(Refresh_Frame_Buf, 0, 0, WIDTH,  HEIGHT, false, Init_Target_Memory_Addr,false);
-    // ***************************************
-    gettimeofday(&stop, NULL);
-    t_refresh = (stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec;
-    // ============ STOP TIMING =============
-
-    Debug(
-    "TIMINGS:\nnewimage: %lu ms\nselectimage: %lu ms\nepdmode: %lu ms\nsetbitsperpixel: %lu ms\nclear: %lu ms\nreadbmp: %lu ms\nrefresh: %lu ms\n",
-        t_newimage / 1000,
-        t_selectimage / 1000,
-        t_epdmode / 1000,
-        t_setbitsperpixel / 1000,
-        t_clear / 1000,
-        t_readbmp / 1000,
-        t_refresh / 1000
-    );
 
     if(Refresh_Frame_Buf != NULL){
         free(Refresh_Frame_Buf);
